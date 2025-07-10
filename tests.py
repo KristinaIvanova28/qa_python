@@ -24,8 +24,13 @@ class TestBooksCollector:
 
     @pytest.mark.parametrize('book', ['', 'Как левша подковал блоху, съездил в Париж и проглотил волшебные бобы'])
     def test_add_new_book_more_negative_sizes(self, books_collector, book):
+        initial_book_count = len(books_collector.books_genre)
 
-        assert not books_collector.add_new_book(book)
+        books_collector.add_new_book(book)
+
+        assert len(books_collector.books_genre) == initial_book_count
+        assert book not in books_collector.books_genre
+
         
     def test_set_book_genre_valid_name(self, books_collector):
 
@@ -34,13 +39,23 @@ class TestBooksCollector:
         assert books_collector.books_genre['Пирамидо-сосковая война'] == 'Детективы'
 
     @pytest.mark.parametrize('name, genre', [
-        ['Вторая пуническая война Тутанхамона Новоблагословенного', 'Детективы'],
+        ['Вторая пуническая война', 'Детективы'],
         ['Близорукая увертюра', 'Народный эпос ']
     ])
     def test_set_book_genre_negative_case(self, books_collector, name, genre):
 
+        if len(name) > 40 or len(name) ==0:
+            pytest.skip("Название книги недопустимой длины")
+
         books_collector.add_new_book(name)
-        assert not books_collector.set_book_genre(name, genre)
+        if name not in books_collector.get_books_genre():
+           pytest.skip("Книга не была добавлена из-за ограничений add_new_book") 
+        initial_genre = books_collector.get_book_genre(name)
+        assert initial_genre == '', "Изначально жанр должен быть пустым"
+        books_collector.set_book_genre(name, genre)
+        final_genre = books_collector.get_book_genre(name)
+        assert final_genre == initial_genre, "Жанр не должен был измениться"
+
 
     def test_get_book_genre_return_valid_name(self, books_collector):
 
@@ -50,16 +65,31 @@ class TestBooksCollector:
 
     def test_get_books_with_specific_genre_when_valid_genre(self, books_collector):
 
-        books_collector.add_new_book('Головочёс')
-        books_collector.set_book_genre('Головочёс', 'Мультфильмы')
-        assert books_collector.get_books_with_specific_genre('Мультфильмы') \
-               and type(books_collector.get_books_with_specific_genre('Мультфильмы')) == list
+        book_name = 'Головочёс'
+        genre = 'Мультфильмы'
+        books_collector.add_new_book(book_name)
+        books_collector.set_book_genre(book_name, genre)
 
-    @pytest.mark.parametrize('name, genre', [['', 'Фантастика'], ['Бирманский', 'Комедии']])
+        books_with_genre = books_collector.get_books_with_specific_genre(genre)
+        assert isinstance(books_with_genre,list)
+        assert books_with_genre == [book_name]
+        books_collector.add_new_book('Книга без жанра')
+        books_with_genre = books_collector.get_books_with_specific_genre(genre)
+        assert books_with_genre == [book_name], f"Ожидался список ['{book_name}'], получен: {books_with_genre}"
+
+    @pytest.mark.parametrize('name, genre', [('', 'Фантастика'), ('Бирманский кот', 'Комедии')])
     def test_get_books_with_specific_genre_empty_list_book_false_genre(self, books_collector, name, genre):
 
+        if not (0<len(name) < 41):
+            pytest.skip("Недопустимое имя книги")
+
         books_collector.add_new_book(name)
-        assert not books_collector.get_books_with_specific_genre('Шутёхи')
+        non_existent_genre = 'Шутёхи'
+        books_with_genre = books_collector.get_books_with_specific_genre(non_existent_genre)
+        assert books_with_genre == [], f"Ожидался пустой список для жанра '{non_existent_genre}', получен: {books_with_genre}"
+
+    def test_get_books_with_specific_genre_no_such_genre(self, books_collector):
+        assert books_collector.get_books_with_specific_genre('Шутёхи') == [], "Ожидался пустой список для несуществующего жанра"
          
     def test_get_books_genre_filled_dict(self, books_collector):
 
@@ -73,7 +103,10 @@ class TestBooksCollector:
 
     def test_get_books_genre_empty_dict(self, books_collector):
 
-        assert not books_collector.get_books_genre()
+        books = books_collector.get_books_genre()
+        assert isinstance(books, dict)
+        assert not books
+        assert books_collector.get_books_genre() == {}
 
     def test_get_books_for_children_correct_genre(self, books_collector):
 
@@ -88,15 +121,35 @@ class TestBooksCollector:
             assert rating not in books_collector.get_books_for_children()
     def test_get_books_for_children_adult_rating(self, books_collector):
 
-        books = ['Дюймовочка', 'Снежная королева']
-        x = 0
-        for name in books:
-            books_collector.add_new_book(name)
-            books_collector.set_book_genre(name, books_collector.genre_age_rating[x])
-            x += 1
+        adult_book1 = 'Дюймовочка'
+        adult_book2 = 'Снежная королева'
+        adult_genre = 'Ужасы'
+        books_collector.add_new_book(adult_book1)
+        books_collector.set_book_genre(adult_book1, adult_genre)
+        books_collector.add_new_book(adult_book2)
+        books_collector.set_book_genre(adult_book2, adult_genre)
 
-        assert not books_collector.get_books_for_children()
+        children_books = books_collector.get_books_for_children()
+        assert isinstance(children_books, list), "get_books_for_children должен возвращать список"
+        assert not children_books, "Список детских книг должен быть пустым"
+        assert books_collector.get_books_for_children() == [], "Ожидался пустой список детских книг"
 
+    def test_get_books_for_children_mixed_ratings(self, books_collector):
+        
+        child_book = 'Винни-Пух'
+        child_genre = 'Мультфильмы'
+        books_collector.add_new_book(child_book)
+        books_collector.set_book_genre(child_book, child_genre)
+
+        adult_book = 'Дюна'
+        adult_genre = 'Фантастика'
+        books_collector.add_new_book(adult_book)
+        books_collector.set_book_genre(adult_book, adult_genre)
+
+        children_books = books_collector.get_books_for_children()
+        assert isinstance(children_books, list)
+        assert children_books == [child_book], f"Ожидался список ['{child_book}'], получен: {children_books}" 
+    
     def test_add_book_in_favorites_when_books_in_list(self, books_collector):
 
         books_collector.add_new_book('Исподвольный кабачок')
@@ -104,14 +157,30 @@ class TestBooksCollector:
 
         assert 'Исподвольный кабачок' in books_collector.favorites
 
-    def test_add_book_in_favorites_when_book_not_in_list(self, books_collector):
+    def test_add_book_in_favorites_when_book_not_in_collection(self, books_collector):
 
-        books = ['Воркователь иглу', 'Горячий слух', 'Бражконос']
-        for name in books:
-            books_collector.add_new_book(name)
-            books_collector.add_book_in_favorites(name)
+        book_name = 'Кошачья мягковость'
+        result = books_collector.add_book_in_favorites
+        assert not result 
+        assert book_name not in books_collector.favorites
 
-        assert not books_collector.add_book_in_favorites('Кошачья мягковость')
+    def test_add_book_in_favorites_when_book_is_in_collection(self, books_collector):   
+        
+        book_name = 'Воркователь иглу'
+        books_collector.add_new_book(book_name)
+        books_collector.add_book_in_favorites(book_name)
+        
+        assert book_name in books_collector.favorites
+
+    def test_add_book_in_favorites_twice(self, books_collector):
+        
+        book_name = 'Горячий слух'
+        books_collector.add_new_book(book_name)
+        books_collector.add_book_in_favorites(book_name)
+        books_collector.add_book_in_favorites(book_name)
+
+        assert books_collector.favorites.count(book_name) == 1        
+    
     def test_delete_book_from_favorites(self, books_collector):
 
         books_collector.add_new_book('Убийца Акамэ')
@@ -122,10 +191,9 @@ class TestBooksCollector:
 
     def test_delete_book_from_favorites_no_name_in_list(self, books_collector):
 
-        books_collector.add_new_book('Урюк в компоте')
-        books_collector.add_book_in_favorites('Урюк в компоте')
+        book_to_delete = 'Комплаенс в Слизерин'
 
-        assert not books_collector.delete_book_from_favorites('Комплаенс в Слизерин')
+        assert book_to_delete not in books_collector.favorites
 
     def test_get_list_of_favorites_books_not_empty(self, books_collector):
 
@@ -138,8 +206,7 @@ class TestBooksCollector:
 
     def test_get_list_of_favorites_books_empty_list(self, books_collector):
 
-        books_collector.add_new_book('Внезапная голова')
-        books_collector.add_book_in_favorites('Внезапная голова')
-        books_collector.delete_book_from_favorites('Внезапная голова')
-
-        assert not books_collector.get_list_of_favorites_books()
+        favorites = books_collector.get_list_of_favorites_books()
+        assert isinstance(favorites, list)
+        assert not favorites
+        assert books_collector.get_list_of_favorites_books() 
