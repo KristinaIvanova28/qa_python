@@ -52,10 +52,9 @@
 ### Тесты delete_book_from_favorites
 
 *   `test_delete_book_from_favorites`: Проверяет, что удаление книги из избранного, когда она там есть, удаляет её из списка `favorites`.
-*   `test_delete_book_from_favorites_no_name_in_list`: Проверяет, что удаление книги из избранного, когда её там нет, не изменяет список `favorites`.
+*   `test_delete_book_from_favorites_no_name_in_list`: Проверяет, что удаление книги из избранного, когда её там нет, не изменяет список `favorites`
 
 ### Тесты get_list_of_favorites_books
 
 *   `test_get_list_of_favorites_books_not_empty`: Проверяет, что `get_list_of_favorites_books` возвращает список избранных книг, если он не пуст.
 *   `test_get_list_of_favorites_books_empty_list`: Проверяет, что `get_list_of_favorites_books` возвращает пустой список, если список избранных книг пуст.
-
