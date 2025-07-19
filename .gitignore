@@ -1,0 +1,12 @@
+# Папки с виртуальным окружением Python
+venv/
+.venv/
+env/
+.env/
+
+# Файлы, специфичные для операционной системы (например, macOS)
+.DS_Store
+
+.vscode
+settings.json
+__init__.py
