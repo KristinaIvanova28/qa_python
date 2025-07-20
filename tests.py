@@ -213,3 +213,4 @@ class TestBooksCollector:
         favorites = books_collector.get_list_of_favorites_books()
         assert isinstance(favorites, list)
         assert not favorites
+        
